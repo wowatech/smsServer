@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Configuration>
+    <Properties>
+        <!-- 文件输出格式 -->
+        <Property name="PATTERN">%d{yyyy-MM-dd HH:mm:ss.SSS} |-%-5level [%thread] %c [%L] -| %msg%n</Property>
+        <Property name="MSG_PATTERN">%msg%n</Property>
+
+        <Property name="PATH">logs</Property>
+    </Properties>
+
+    <Appenders>
+        <!--这个输出控制台的配置，这里输出除了warn和error级别的信息到System.out -->
+        <Console name="console_out_appender" target="SYSTEM_OUT">
+            <!-- 控制台只输出level及以上级别的信息(onMatch),其他的直接拒绝(onMismatch) . -->
+            <ThresholdFilter level="DEBUG" onMatch="ACCEPT"
+                             onMismatch="DENY"/>
+            <!-- 输出日志的格式 -->
+            <PatternLayout pattern="%5p [%t] %d{yyyy-MM-dd HH:mm:ss} (%F:%L) %m%n"/>
+        </Console>
+        <!-- 这个输出控制台的配置，这里输出error级别的信息到System.err，在eclipse控制台上看到的是红色文字 -->
+        <Console name="console_err_appender" target="SYSTEM_ERR">
+            <ThresholdFilter level="ERROR" onMatch="ACCEPT"
+                             onMismatch="DENY"/>
+            <PatternLayout pattern="%5p [%t] %d{yyyy-MM-dd HH:mm:ss} (%F:%L) %m%n"/>
+        </Console>
+
+        <RollingFile name="common-info" fileName="${PATH}/app-common-info.log"
+                     filePattern="${PATH}/$${date:MM-dd}/app-common-info-%d{MM-dd-yyyy}.log.gz">
+            <Filters>
+                <ThresholdFilter level="info" onMatch="ACCEPT" onMismatch="DENY"/>
+                <ThresholdFilter level="error" onMatch="DENY"/>
+            </Filters>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+            </Policies>
+            <PatternLayout pattern="${PATTERN}"/>
+        </RollingFile>
+
+
+        <RollingFile name="common-error" fileName="${PATH}/app-common-error.log"
+                     filePattern="${PATH}/$${date:MM-dd}/app-common-error-%d{MM-dd-yyyy}.log.gz">
+            <Filters>
+                <ThresholdFilter level="error" onMatch="ACCEPT" onMismatch="DENY"/>
+            </Filters>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+            </Policies>
+            <PatternLayout pattern="${PATTERN}"/>
+        </RollingFile>
+
+        <RollingFile name="app-info" fileName="${PATH}/app-info.log"
+                     filePattern="${PATH}/$${date:MM-dd}/app-info-%d{MM-dd-yyyy}.log.gz">
+            <Filters>
+                <ThresholdFilter level="info" onMatch="ACCEPT" onMismatch="DENY"/>
+                <ThresholdFilter level="error" onMatch="DENY"/>
+            </Filters>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+            </Policies>
+            <PatternLayout pattern="${PATTERN}"/>
+        </RollingFile>
+
+        <RollingFile name="app-error" fileName="${PATH}/app-error.log"
+                     filePattern="${PATH}/$${date:MM-dd}/app-error-%d{MM-dd-yyyy}.log.gz">
+            <Filters>
+                <ThresholdFilter level="error" onMatch="ACCEPT" onMismatch="DENY"/>
+            </Filters>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+            </Policies>
+            <PatternLayout pattern="${PATTERN}"/>
+        </RollingFile>
+
+    </Appenders>
+
+    <Loggers>
+        <Root level="info">
+            <appender-ref ref="common-info" level="info"/>
+            <appender-ref ref="common-error" level="error"/>
+        </Root>
+
+        <Logger name="com.zx.sms" additivity="false" level="info"
+                     includeLocation="true">
+            <appender-ref ref="app-info" level="info"/>
+            <appender-ref ref="app-error" level="error"/>
+        </Logger>
+    </Loggers>
+
+</Configuration>

@@ -1,22 +1,30 @@
 package com.zx.sms.handler.api.smsbiz;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.apache.commons.lang3.time.DateFormatUtils;
-import org.springframework.stereotype.Component;
-
-import com.zx.sms.codec.cmpp.msg.CmppDeliverRequestMessage;
-import com.zx.sms.codec.cmpp.msg.CmppDeliverResponseMessage;
-import com.zx.sms.codec.cmpp.msg.CmppReportRequestMessage;
-import com.zx.sms.codec.cmpp.msg.CmppSubmitRequestMessage;
-import com.zx.sms.codec.cmpp.msg.CmppSubmitResponseMessage;
+import com.zx.sms.codec.cmpp.msg.*;
 import com.zx.sms.common.util.CachedMillisecondClock;
-
+import com.zx.sms.config.SpringContextUtil;
+import com.zx.sms.connect.manager.EndpointEntity;
+import com.zx.sms.converter.CmppReportMessageConverter;
+import com.zx.sms.entity.CmppReportMessage;
+import com.zx.sms.mq.RocketMQProducer;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
+import org.apache.commons.lang3.time.DateFormatUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Executor;
+
+
 @Component
 public class CMPPMessageReceiveHandler extends MessageReceiveHandler {
+
+	private static final Logger logger= LoggerFactory.getLogger(CMPPMessageReceiveHandler.class);
+
+
 
 	@Override
 	protected ChannelFuture reponse(final ChannelHandlerContext ctx, Object msg) {
@@ -66,6 +74,8 @@ public class CMPPMessageReceiveHandler extends MessageReceiveHandler {
 					reportlist.add(deliver);
 				}
 			}
+
+
 			
 			final CmppSubmitResponseMessage resp = new CmppSubmitResponseMessage(e.getHeader().getSequenceId());
 			resp.setResult(0);
@@ -88,11 +98,27 @@ public class CMPPMessageReceiveHandler extends MessageReceiveHandler {
 				report.setSmscSequence(0);
 				deliver.setReportRequestMessage(report);
 				reportlist.add(deliver);
-				
-				ctx.executor().submit(new Runnable() {
-					public void run() {
-						for(CmppDeliverRequestMessage t : reportlist)
-							ctx.channel().writeAndFlush(t);
+
+				Executor executor=	SpringContextUtil.getBean("mqExecutor",Executor.class);
+
+
+				EndpointEntity entity= getEndpointEntity();
+
+
+
+				executor.execute(()->{
+					try{
+						for (CmppDeliverRequestMessage cmppDeliverRequestMessage:reportlist){
+
+							CmppReportMessage cmppReportMessage= CmppReportMessageConverter.reConvert(cmppDeliverRequestMessage,entity);
+							RocketMQProducer rocketMQProducer=	SpringContextUtil.getBean(RocketMQProducer.class);
+							if (rocketMQProducer!=null){
+								rocketMQProducer.sendReportMessage(cmppReportMessage);
+							}
+
+						}
+					}catch (Exception e1){
+						logger.error("生产状态报告失败",e);
 					}
 				});
 			}

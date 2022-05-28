@@ -12,6 +12,7 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import com.zx.sms.connect.manager.EndpointEntity;
@@ -32,17 +33,22 @@ import com.zx.sms.handler.api.BusinessHandlerInterface;
 /**
  */
 @Component
-public class ConfigFileUtil {
-	private static DefaultConfigurationBuilder configbuilder = new DefaultConfigurationBuilder();
-	private static boolean isLoad = false;
-	private static CombinedConfiguration config=null;
-	private static final Logger logger = LoggerFactory.getLogger(ConfigFileUtil.class);
+public class SmsServerConfiguration {
+	private  DefaultConfigurationBuilder configbuilder = new DefaultConfigurationBuilder();
+	private  boolean isLoad = false;
+	private  CombinedConfiguration config=null;
+	private  final Logger logger = LoggerFactory.getLogger(SmsServerConfiguration.class);
+
+	@Value("${mock.config.file-path}")
+	private String configFilePath;
 	
 	
-	public synchronized static void loadconfiguration(String filepath) {
+	private synchronized  void loadConfiguration(String filepath) {
 		// 多线程并发时，需要判断一次是否被其它线程load过了
-		if (isLoad)
+		if (isLoad){
 			return;
+		}
+
 		configbuilder.setFileName(filepath);
 		try {
 			config = configbuilder.getConfiguration(true);
@@ -52,10 +58,9 @@ public class ConfigFileUtil {
 		}
 	}
 	
-	private static void initLoad() {
+	public   void initLoad() {
 		if (!isLoad) {
-			loadconfiguration("configuration.xml");
-			// loadconfiguration("DBSQL.sql");
+			loadConfiguration(configFilePath);
 		}
 	}
 
@@ -111,7 +116,7 @@ public class ConfigFileUtil {
 		}
 		return result;
 	}
-	private static void buildSgipEndpointEntity(HierarchicalConfiguration session, SgipEndpointEntity tmp) {
+	private  void buildSgipEndpointEntity(HierarchicalConfiguration session, SgipEndpointEntity tmp) {
 		initLoad();
 		tmp.setId(session.getString("id"));
 		tmp.setValid(session.getBoolean("isvalid", true));
@@ -123,7 +128,7 @@ public class ConfigFileUtil {
 		addBusinessHandlerSet(session,tmp);
 	}
 	
-	private static void buildSMGPEndpointEntity(HierarchicalConfiguration session, SMGPEndpointEntity tmp) {
+	private  void buildSMGPEndpointEntity(HierarchicalConfiguration session, SMGPEndpointEntity tmp) {
 		initLoad();
 		tmp.setId(session.getString("id"));
 		tmp.setValid(session.getBoolean("isvalid", true));
@@ -136,7 +141,7 @@ public class ConfigFileUtil {
 
 	}
 	
-	private static void buildSMPPEndpointEntity(HierarchicalConfiguration session, SMPPEndpointEntity tmp) {
+	private  void buildSMPPEndpointEntity(HierarchicalConfiguration session, SMPPEndpointEntity tmp) {
 		initLoad();
 		tmp.setId(session.getString("id"));
 		tmp.setValid(session.getBoolean("isvalid", true));
@@ -148,7 +153,7 @@ public class ConfigFileUtil {
 
 	}
 	
-	private static void addBusinessHandlerSet(HierarchicalConfiguration session,EndpointEntity tmp) {
+	private  void addBusinessHandlerSet(HierarchicalConfiguration session,EndpointEntity tmp) {
 		HierarchicalConfiguration handlerSet = session.configurationAt("businessHandlerSet");
 
 		List<Object> handlers = handlerSet.getList("handler");
@@ -175,7 +180,7 @@ public class ConfigFileUtil {
 		}
 	}
 	
-	private static void buildCMPPEndpointEntity(HierarchicalConfiguration session, CMPPEndpointEntity tmp) {
+	private  void buildCMPPEndpointEntity(HierarchicalConfiguration session, CMPPEndpointEntity tmp) {
 		initLoad();
 		tmp.setId(session.getString("id"));
 		tmp.setValid(session.getBoolean("isvalid", true));
@@ -188,7 +193,7 @@ public class ConfigFileUtil {
 
 	}
 	
-	private static BusinessHandlerInterface getBeanFromCtx(String beanName) {
+	private  BusinessHandlerInterface getBeanFromCtx(String beanName) {
 		try {
 			try {
 				Object obj_h = SpringContextUtil.getBean(beanName);
